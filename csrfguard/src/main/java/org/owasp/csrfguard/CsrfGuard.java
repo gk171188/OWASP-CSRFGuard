@@ -137,7 +137,7 @@ public final class CsrfGuard {
 	public String getTokenName() {
 		return config().getTokenName();
 	}
-
+	
 	public int getTokenLength() {
 		return config().getTokenLength();
 	}
@@ -308,10 +308,13 @@ public final class CsrfGuard {
 		if (tokenFromSession != null && !valid) {
 			try {
 				if (isAjaxEnabled() && isAjaxRequest(request)) {
+					getLogger().log(LogLevel.Debug, "Verifying ajax Token");
 					verifyAjaxToken(request);
 				} else if (isTokenPerPageEnabled()) {
+					getLogger().log(LogLevel.Debug, "Verifying Page Token");
 					verifyPageToken(request);
 				} else {
+					getLogger().log(LogLevel.Debug, "Verifying session Token");
 					verifySessionToken(request);
 				}
 				valid = true;
@@ -500,6 +503,9 @@ public final class CsrfGuard {
 		sb.append(String.format("* TokenName: %s\r\n", getTokenName()));
 		sb.append(String.format("* Ajax: %s\r\n", isAjaxEnabled()));
 		sb.append(String.format("* Rotate: %s\r\n", isRotateEnabled()));
+		sb.append(String.format("* UseNewTokenLandingPage: %s\r\n", isUseNewTokenLandingPage()));
+		sb.append(String.format("* StartReqParams: %s\r\n", getStartReqParams()));
+		sb.append(String.format("* StartReqParamsPages: %s\r\n", getStartReqParamsPages()));
 		sb.append(String.format("* Javascript cache control: %s\r\n", getJavascriptCacheControl()));
 		sb.append(String.format("* Javascript domain strict: %s\r\n", isJavascriptDomainStrict()));
 		sb.append(String.format("* Javascript inject attributes: %s\r\n", isJavascriptInjectIntoAttributes()));
@@ -594,6 +600,9 @@ public final class CsrfGuard {
 	}
 
 	private void rotateTokens(HttpServletRequest request) {
+		
+		getLogger().log(LogLevel.Debug, "rotating tokens");
+		
 		HttpSession session = request.getSession(true);
 
 		/** rotate master token **/
@@ -683,6 +692,125 @@ public final class CsrfGuard {
 	
 	public boolean isPrintConfig() {
 		return config().isPrintConfig();
+	}
+	
+	/**
+	 * <h1>checkReqStartPages</h1>
+	 * <p>
+	 * Method checks if Request Start Pages defined matches with Any of the Request URl.
+	 * If match found,returns true else false.
+	 * </p>
+	 * @param requestPages
+	 * @param uri
+	 * @return Boolean
+	 */
+	public boolean checkReqStartPages(String requestPages,String uri) {
+
+		boolean retval = false;
+		String[] pages=null;
+		int counter=0;
+		
+		if(!isFieldEmpty(requestPages)){
+			
+			pages=requestPages.split(",");
+			for(String page : pages){
+				
+				counter=counter+1;
+				
+				if(!isFieldEmpty(page)){
+					
+					/** If page are non-empty string,check for Url match*/
+					if (isUriExactMatch(page, uri)) {
+						retval = Boolean.TRUE;
+					} else if (isUriMatch(page, uri)) {
+						retval = Boolean.TRUE;
+					}
+					
+					/** If match found,flag will be true,exit the loop. */
+					if(retval){
+						break;
+					}
+					
+				}else{
+					
+					/** If start Pages are empty string,continue the loop. */
+					continue;
+				}
+			}
+		}else{
+			
+			/** If start Pages are null or empty string,return false. */
+			retval = Boolean.FALSE;
+		}
+		
+		return retval;
+	}
+	
+	
+	/**
+	 * <h1>checkReqStartParams</h1>
+	 * <p>
+	 * Method checks if Request Start Pages defined matches with Any of the Request URl.
+	 * If match found,returns true else false.
+	 * </p>
+	 * @param rqstStartParams
+	 * @param request
+	 * @return
+	 */
+	public boolean checkReqStartParams(String rqstStartParams,
+			HttpServletRequest request) {
+		
+		boolean retval = false;
+		String[] values=rqstStartParams.split(",");
+		int i=0;
+		
+		/** Checking if Request Params are not Null & empty. */
+		if(!isFieldEmpty(rqstStartParams)){
+			
+			values=rqstStartParams.split(",");
+			for(;i<values.length;){
+				
+				/** Checking if Request Param present in HTTP Request.If present increment the counter else break. */
+				if(request.getParameterMap().containsKey(values[i])){
+					i++;
+				}else{
+					break;
+				}
+			}
+			
+			if(i==values.length){
+				retval=Boolean.TRUE;
+			}else {
+				retval=Boolean.FALSE;
+			}
+			
+		}else{
+			/** rqstStartParams are empty or not defined,returning flag as false. */
+			retval=Boolean.FALSE;
+		}
+		
+		return retval;
+	}
+	
+	
+	/**
+	 * <h1>isFieldEmpty</h1>
+	 * <p>
+	 * Method checks if given Input String is empty or null.
+	 * If its empty or Null,It returns boolean true
+	 * If its not empty,it returns boolean false.
+	 * </p>
+	 * @param value
+	 * @return
+	 */
+	public static boolean isFieldEmpty(String value){
+		
+		if ((value != null) && !(value.trim().equals(""))){
+			return false;
+		}else{
+			return true;
+		}
+		
 	}
 	
 	/**
@@ -780,4 +908,13 @@ public final class CsrfGuard {
 		return config().getUnprotectedMethods();
 	}
 
+	public String getStartReqParams() {
+		return config().getStartReqParams();
+	}
+
+	public String getStartReqParamsPages() {
+		return config().getStartReqParamsPages();
+	}
+
+	
 }
