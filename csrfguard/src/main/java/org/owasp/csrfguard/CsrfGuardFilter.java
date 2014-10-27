@@ -52,7 +52,8 @@ public final class CsrfGuardFilter implements Filter {
 	}
 
 	@Override
-	public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException, ServletException {
+	public void doFilter(ServletRequest request, ServletResponse response,
+			FilterChain filterChain) throws IOException, ServletException {
 
 		//maybe the short circuit to disable is set
 		if (!CsrfGuard.getInstance().isEnabled()) {
@@ -65,17 +66,38 @@ public final class CsrfGuardFilter implements Filter {
 			
 			HttpServletRequest httpRequest = (HttpServletRequest) request;
 			HttpSession session = httpRequest.getSession(false);
+			CsrfGuard csrfGuard = CsrfGuard.getInstance();
+			boolean bypassValidationFlg=Boolean.FALSE;
 			
-			//if there is no session and we arent validating when no session exists
+			String rqstStartParams=csrfGuard.getStartReqParams();
+			String rqstStartPages=csrfGuard.getStartReqParamsPages();
+	
+			csrfGuard.getLogger().log("rqstStartParams : "+rqstStartParams+" | rqstStartPages : "+rqstStartPages);
+			
+			//if there is no session and we aren't validating when no session exists
 			if (session == null && !CsrfGuard.getInstance().isValidateWhenNoSessionExists()) {
 				// If there is no session, no harm can be done
+				csrfGuard.getLogger().log("If there is no session, no harm can be done");
 				filterChain.doFilter(httpRequest, (HttpServletResponse) response);
 				return;
 			}
 
-			CsrfGuard csrfGuard = CsrfGuard.getInstance();
 			csrfGuard.getLogger().log(String.format("CsrfGuard analyzing request %s", httpRequest.getRequestURI()));
 
+			/** Checking for Start Request Params Pages and Params Scenario. */
+			if(rqstStartPages!=null && !"".equalsIgnoreCase(rqstStartPages)){
+				if(csrfGuard.checkReqStartPages(rqstStartPages, httpRequest.getRequestURI())){
+					bypassValidationFlg=csrfGuard.checkReqStartParams(rqstStartParams, httpRequest);
+				}
+			}
+			
+			csrfGuard.getLogger().log("session Val : "+session+" | bypassValidationFlg : "+bypassValidationFlg);
+			
+			if(bypassValidationFlg){
+				filterChain.doFilter(httpRequest, (HttpServletResponse) response);
+				return;
+			}
+			
 			InterceptRedirectResponse httpResponse = new InterceptRedirectResponse((HttpServletResponse) response, httpRequest, csrfGuard);
 
 //			 if(MultipartHttpServletRequest.isMultipartRequest(httpRequest)) {
@@ -95,7 +117,6 @@ public final class CsrfGuardFilter implements Filter {
 
 		} else {
 			filterConfig.getServletContext().log(String.format("[WARNING] CsrfGuard does not know how to work with requests of class %s ", request.getClass().getName()));
-
 			filterChain.doFilter(request, response);
 		}
 	}
