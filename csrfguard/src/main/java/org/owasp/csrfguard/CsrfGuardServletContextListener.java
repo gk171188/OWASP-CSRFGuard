@@ -4,11 +4,16 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Properties;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.owasp.csrfguard.config.overlay.ConfigurationOverlayProvider;
 import org.owasp.csrfguard.util.Streams;
@@ -19,6 +24,10 @@ public class CsrfGuardServletContextListener implements ServletContextListener {
 
 	private final static String CONFIG_PRINT_PARAM = "Owasp.CsrfGuard.Config.Print";
 
+	private final static String FILE_PREFIX = "file:";
+	
+	private final static Logger LOGGER=LoggerFactory.getLogger("MPesa");
+	
 	/**
 	 * servlet context (will be the empty string if it is / )
 	 */
@@ -49,6 +58,7 @@ public class CsrfGuardServletContextListener implements ServletContextListener {
 	public void contextInitialized(ServletContextEvent event) {
 		ServletContext context = event.getServletContext();
 		servletContext = context.getContextPath();
+		
 		//since this is just a prefix of a path, then if there is no servlet context, it is the empty string
 		if (servletContext == null || "/".equals(servletContext)) {
 			servletContext = "";
@@ -62,26 +72,71 @@ public class CsrfGuardServletContextListener implements ServletContextListener {
 
 		InputStream is = null;
 		Properties properties = new Properties();
+		boolean fileFlg=false;
 
 		try {
-			is = getResourceStream(configFileName, context, false);
-			
-			if (is == null) {
-				is = getResourceStream(ConfigurationOverlayProvider.META_INF_CSRFGUARD_PROPERTIES, context, false);
+		
+			if(configFileName!=null && !"".equalsIgnoreCase(configFileName)){
+				
+				if(configFileName.contains(FILE_PREFIX)){
+					
+					fileFlg=Boolean.TRUE;
+				}else{
+					fileFlg=Boolean.FALSE;
+				}
 			}
+			
+			if(fileFlg){
+				
+				String[] fileNmeArry=configFileName.split(FILE_PREFIX);
+				
+				LOGGER.info("owasp csrfguard properties file : "+fileNmeArry[1]);
+				
+				File file = new File(fileNmeArry[1]);
 
-			if (is == null) {
-				throw new RuntimeException("Cant find default owasp csrfguard properties file: " + configFileName);
+				if (file !=null && file.exists()) {
+					
+					LOGGER.info("owasp csrfguard properties file Exists : "+file.getName());
+					
+					is = new FileInputStream(file);
+					
+				}else{
+					
+					is = getResourceStream(configFileName, context, false);
+					
+					if (is == null) {
+						is = getResourceStream(ConfigurationOverlayProvider.META_INF_CSRFGUARD_PROPERTIES, context, false);
+					}
+
+					if (is == null) {
+						throw new RuntimeException("Cant find default owasp csrfguard properties file: " + configFileName);
+					}
+				}
+				
+			}else{
+				
+				is = getResourceStream(configFileName, context, false);
+				
+				if (is == null) {
+					is = getResourceStream(ConfigurationOverlayProvider.META_INF_CSRFGUARD_PROPERTIES, context, false);
+				}
+
+				if (is == null) {
+					throw new RuntimeException("Cant find default owasp csrfguard properties file: " + configFileName);
+				}
 			}
-			
+		
 			properties.load(is);
+			
+			getPropertyAsString(properties);
+			
 			CsrfGuard.load(properties);
+			
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
 			Streams.close(is);
 		}
-
 
 		printConfigIfConfigured(context, "Printing properties before Javascript servlet, note, the javascript properties might not be initialized yet: ");
 	}
@@ -141,4 +196,11 @@ public class CsrfGuardServletContextListener implements ServletContextListener {
 		return is;
 	}
 
+	public static void getPropertyAsString(Properties prop) {
+		
+	  StringWriter writer = new StringWriter();
+	  prop.list(new PrintWriter(writer));
+	  
+	  LOGGER.info("Contents of properties file : "+writer.getBuffer().toString());
+	}
 }
