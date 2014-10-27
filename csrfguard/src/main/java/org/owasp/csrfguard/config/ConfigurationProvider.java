@@ -121,8 +121,8 @@ public interface ConfigurationProvider {
 	boolean isJavascriptInjectIntoForms();
 
 	/**
-	 * if the referer to te javascript must match domain
-	 * @return true if the javascrript must match domain
+	 * if the referrer to the javascript must match domain
+	 * @return true if the javascript must match domain
 	 */
 	boolean isJavascriptRefererMatchDomain();
 
@@ -131,5 +131,17 @@ public interface ConfigurationProvider {
 	String getJavascriptXrequestedWith();
 
 	String getJavascriptTemplateCode();
+	
+	/**
+	 * Added comma separated Parameters which needs to be checked in Request, if Present
+	 * those pages should not be validated for CSRF filter.
+	 */
+	String getStartReqParams();
+	
+	/**
+	 * Added comma separated Url patterns which needs to be checked for presence of StartReqParams in Request, if Present
+	 * those pages should not be validated for CSRF filter.
+	 */
+	String getStartReqParamsPages();
 
 }
