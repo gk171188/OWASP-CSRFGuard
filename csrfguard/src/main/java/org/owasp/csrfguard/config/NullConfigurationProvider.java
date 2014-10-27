@@ -253,4 +253,20 @@ public final class NullConfigurationProvider implements ConfigurationProvider {
 		return false;
 	}
 
+	/**
+	 * @see org.owasp.csrfguard.config.ConfigurationProvider#getStartReqParams()
+	 */
+	@Override
+	public String getStartReqParams() {
+		return null;
+	}
+
+	/**
+	 * @see org.owasp.csrfguard.config.ConfigurationProvider#getStartReqParamsPages()
+	 */
+	@Override
+	public String getStartReqParamsPages() {
+		return null;
+	}
+
 }
