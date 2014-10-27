@@ -43,7 +43,6 @@ import javax.servlet.ServletConfig;
 
 import org.owasp.csrfguard.CsrfGuardServletContextListener;
 import org.owasp.csrfguard.action.IAction;
-import org.owasp.csrfguard.config.overlay.ConfigurationOverlayProvider;
 import org.owasp.csrfguard.log.ILogger;
 import org.owasp.csrfguard.servlet.JavaScriptServlet;
 import org.owasp.csrfguard.util.CsrfGuardUtils;
@@ -100,6 +99,10 @@ public final class PropertiesConfigurationProvider implements ConfigurationProvi
 	
 	private Properties propertiesCache;
 	
+	private final String startReqParams;
+	
+	private final String startReqParamsPages;
+	
 	public PropertiesConfigurationProvider(Properties properties) {
 		try {
 			this.propertiesCache = properties;
@@ -114,7 +117,11 @@ public final class PropertiesConfigurationProvider implements ConfigurationProvi
 			tokenLength = Integer.parseInt(propertyString(properties, "org.owasp.csrfguard.TokenLength", "32"));
 			rotate = Boolean.valueOf(propertyString(properties, "org.owasp.csrfguard.Rotate", "false"));
 			tokenPerPage = Boolean.valueOf(propertyString(properties, "org.owasp.csrfguard.TokenPerPage", "false"));
-
+			
+			/** Added Changes of Request Params and Request start Pages. */
+			startReqParams = propertyString(properties, "org.owasp.csrfguard.StartReqParams", null);
+			startReqParamsPages=propertyString(properties, "org.owasp.csrfguard.StartReqParamsPages", null);
+			
 			this.validationWhenNoSessionExists = Boolean.valueOf(propertyString(properties, "org.owasp.csrfguard.ValidateWhenNoSessionExists", "true"));
 			
 			tokenPerPagePrecreate = Boolean.valueOf(propertyString(properties, "org.owasp.csrfguard.TokenPerPagePrecreate", "false"));
@@ -562,6 +569,16 @@ public final class PropertiesConfigurationProvider implements ConfigurationProvi
 	public boolean isJavascriptInjectFormAttributes() {
 		this.javascriptInitParamsIfNeeded();
 		return this.javascriptInjectFormAttributes;
+	}
+
+	@Override
+	public String getStartReqParams() {
+		return startReqParams;
+	}
+
+	@Override
+	public String getStartReqParamsPages() {
+		return startReqParamsPages;
 	}
 
 }
