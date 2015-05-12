@@ -34,6 +34,7 @@ import java.io.PrintWriter;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -308,13 +309,10 @@ public final class CsrfGuard {
 		if (tokenFromSession != null && !valid) {
 			try {
 				if (isAjaxEnabled() && isAjaxRequest(request)) {
-					getLogger().log(LogLevel.Debug, "Verifying ajax Token");
 					verifyAjaxToken(request);
 				} else if (isTokenPerPageEnabled()) {
-					getLogger().log(LogLevel.Debug, "Verifying Page Token");
 					verifyPageToken(request);
 				} else {
-					getLogger().log(LogLevel.Debug, "Verifying session Token");
 					verifySessionToken(request);
 				}
 				valid = true;
@@ -537,7 +535,35 @@ public final class CsrfGuard {
 	}
 
 	private boolean isAjaxRequest(HttpServletRequest request) {
-		return request.getHeader("X-Requested-With") != null;
+		
+		boolean flag=false;
+		
+		//return request.getHeader("X-Requested-With") != null;
+		
+		if(request.getHeader("X-Requested-With") != null){
+			
+			String value=request.getHeader("X-Requested-With");
+			
+			if(value.toUpperCase().contains("XMLHttpRequest".toUpperCase())){
+				
+				System.out.println("Header value matched : "+value+" at "+Calendar.getInstance().getTime());
+				
+				flag=Boolean.TRUE;
+			
+			}else{
+				
+				System.out.println("Header value mismatch : "+value+" at "+Calendar.getInstance().getTime());
+				
+				if(request.getHeader("X-Ajax-call") != null){
+					flag=Boolean.TRUE;
+				}else{
+					flag=Boolean.FALSE;
+				}
+			}
+		}
+		
+		return flag;
+		
 	}
 
 	private void verifyAjaxToken(HttpServletRequest request) throws CsrfGuardException {
@@ -600,8 +626,6 @@ public final class CsrfGuard {
 	}
 
 	private void rotateTokens(HttpServletRequest request) {
-		
-		getLogger().log(LogLevel.Debug, "rotating tokens");
 		
 		HttpSession session = request.getSession(true);
 
